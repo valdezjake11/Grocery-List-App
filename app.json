@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "Smart Grocery List",
+    "slug": "smart-grocery-list",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#F5F7F2"
+    },
+    "android": {
+      "package": "com.jakevaldez.smartgrocerylist"
+    },
+    "ios": {
+      "supportsTablet": true
+    }
+  }
+}
