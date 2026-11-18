@@ -31,15 +31,16 @@ Smart Grocery List helps users organize grocery shopping in one place. Users can
    git clone https://github.com/valdezjake11/Grocery-List-App.git
    cd Grocery-List-App
    ```
-3. Install dependencies:
+3. Download `Smart_Grocery_List_Source.zip` from the repository, then extract its contents into the repository folder. The archive contains the complete Expo app source.
+4. Install dependencies:
    ```bash
    npm install
    ```
-4. Start Expo:
+5. Start Expo:
    ```bash
    npx expo start
    ```
-5. Scan the QR code with Expo Go, or press `a` to open an Android emulator.
+6. Scan the QR code with Expo Go, or press `a` to open an Android emulator.
 
 ## Student Information
 - **Name:** Jake Valdez
