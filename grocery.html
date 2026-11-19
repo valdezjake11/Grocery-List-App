@@ -14,98 +14,22 @@ button{cursor:pointer;border:0;background:var(--green);color:white;font-weight:6
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}.toolbar input{flex:1;min-width:170px}.stats{display:flex;gap:12px;flex-wrap:wrap}.stat{background:#f1f7f3;padding:10px 14px;border-radius:12px;flex:1;min-width:110px}.stat b{display:block;font-size:22px}.stat span{font-size:12px;color:var(--muted)}
 ul{padding:0;margin:0;list-style:none}.item{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--line)}.item:last-child{border:0}.item input[type=checkbox]{width:19px;height:19px;accent-color:var(--green)}.item-name{flex:1;min-width:0}.item-name small{display:block;color:var(--muted)}.done .item-name{text-decoration:line-through;color:#91a097}.actions{display:flex;gap:6px}.actions button{padding:7px 10px;font-size:13px}.empty{text-align:center;color:var(--muted);padding:25px}.foot{text-align:center;color:var(--muted);font-size:13px;padding:20px}
 @media(max-width:620px){main{margin:18px auto}form{grid-template-columns:1fr 1fr}form input:first-child{grid-column:1/-1}form button{grid-column:1/-1}.item{align-items:flex-start}.actions{flex-direction:column}}
-
-#loginPanel{background:white;border:1px solid var(--line);border-radius:18px;padding:24px;margin-top:18px;text-align:center}#appContent[hidden],#loginPanel[hidden]{display:none!important}.googleBtn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:12px 18px;border-radius:10px;background:#16845b;color:white;border:0;font-weight:700;cursor:pointer}.authMsg{color:#a33b35;font-size:14px;margin-top:10px}.accountBar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0;color:var(--muted);font-size:13px}.accountBar button{padding:8px 12px}
 </style>
 </head>
 <body><main>
 <header class="hero"><div class="tag">Student project · BSINTE-2a</div><h1>Smart Grocery List</h1><p>Plan your shopping, track quantities, and keep your list saved on this device.</p></header>
-<section id="loginPanel" class="panel"><h2>Sign in to use your grocery list</h2><p>Sign in with your Google account to access and sync your personal grocery list.</p><button class="googleBtn" id="googleLogin" type="button">Continue with Google</button><p id="authMessage" class="authMsg" role="alert"></p></section><div id="appContent" hidden><div class="accountBar"><span id="accountEmail"></span><button id="logoutBtn" class="secondary" type="button">Sign out</button></div><section class="panel">
+<section class="panel">
 <h2>Add a grocery item</h2>
 <form id="addForm"><input id="name" placeholder="e.g. Rice, eggs, milk" aria-label="Item name" required maxlength="70"><input id="qty" type="number" min="1" value="1" aria-label="Quantity" required><select id="category" aria-label="Category"><option>Other</option><option>Fruits & Vegetables</option><option>Meat & Seafood</option><option>Dairy</option><option>Pantry</option><option>Beverages</option><option>Household</option></select><button type="submit">Add item</button></form>
 <div class="toolbar"><input id="search" placeholder="Search your list…" aria-label="Search items"><select id="filter" aria-label="Filter items"><option value="all">All items</option><option value="active">To buy</option><option value="done">Purchased</option></select></div>
 <div class="stats"><div class="stat"><b id="total">0</b><span>Total items</span></div><div class="stat"><b id="remaining">0</b><span>To buy</span></div><div class="stat"><b id="completed">0</b><span>Purchased</span></div></div>
 </section>
 <section class="panel"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><h2>Your grocery list</h2><button class="secondary" id="clearDone" type="button">Clear purchased</button></div><ul id="list"></ul><div class="empty" id="empty">Your list is empty. Add your first grocery item above.</div></section>
-<div class="foot">Created by Jake Valdez · BSINTE-2a · Your list is securely synced to your account.</div></div>
+<div class="foot">Created by Jake Valdez · BSINTE-2a · Your list is saved automatically in this browser.</div>
 </main>
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyCxWT-GhMMIr68-8PasxkLDSJKtRESnhWo",
-  authDomain: "grocery-list-app-e285c.firebaseapp.com",
-  projectId: "grocery-list-app-e285c",
-  storageBucket: "grocery-list-app-e285c.firebasestorage.app",
-  messagingSenderId: "1079087645585",
-  appId: "1:1079087645585:web:974e3d30907b7382fd9030",
-  measurementId: "G-T92YHDPDEY"
-};
-const app=initializeApp(firebaseConfig);
-const auth=getAuth(app);
-const db=getFirestore(app);
-const provider=new GoogleAuthProvider();
-provider.setCustomParameters({prompt:"select_account"});
-const $=id=>document.getElementById(id);
-let items=[],stopSync=null,currentUser=null;
-const itemsRef=uid=>collection(db,"users",uid,"groceryItems");
-function showError(message){$("authMessage").textContent=message}
-$("googleLogin").addEventListener("click",async()=>{
-  $("googleLogin").disabled=true;showError("");
-  try{await signInWithPopup(auth,provider)}
-  catch(error){showError(error.code==="auth/unauthorized-domain"?"This website domain is not authorized yet. Add valdezjake11.github.io in Firebase Authentication settings.":error.message)}
-  finally{$("googleLogin").disabled=false}
-});
-$("logoutBtn").addEventListener("click",()=>signOut(auth));
-function render(){
- const q=$("search").value.trim().toLowerCase(),f=$("filter").value;
- const shown=items.filter(x=>(x.name.toLowerCase().includes(q)||x.category.toLowerCase().includes(q))&&(f==="all"||(f==="done"?x.done:!x.done)));
- $("list").innerHTML="";
- shown.forEach(x=>{
-  const li=document.createElement("li");li.className="item"+(x.done?" done":"");
-  const check=document.createElement("input");check.type="checkbox";check.checked=!!x.done;check.setAttribute("aria-label","Mark "+x.name+" purchased");
-  check.onchange=()=>saveItem({...x,done:check.checked});
-  const name=document.createElement("div");name.className="item-name";
-  const strong=document.createElement("strong");strong.textContent=x.name;
-  const small=document.createElement("small");small.textContent="Qty: "+x.qty+" · "+x.category;
-  name.append(strong,small);
-  const actions=document.createElement("div");actions.className="actions";
-  const edit=document.createElement("button");edit.className="secondary";edit.textContent="Edit";
-  edit.onclick=async()=>{const n=prompt("Edit item name:",x.name);if(n&&n.trim()){const qty=prompt("Edit quantity:",x.qty);await saveItem({...x,name:n.trim(),qty:qty!==null&&Number(qty)>0?Number(qty):x.qty})}};
-  const del=document.createElement("button");del.className="danger";del.textContent="Delete";del.onclick=()=>removeItem(x.id);
-  actions.append(edit,del);li.append(check,name,actions);$("list").append(li);
- });
- $("empty").style.display=shown.length?"none":"block";
- $("empty").textContent=items.length?"No matching items.":"Your list is empty. Add your first grocery item above.";
- $("total").textContent=items.length;$("remaining").textContent=items.filter(x=>!x.done).length;$("completed").textContent=items.filter(x=>x.done).length;
-}
-async function saveItem(item){
- if(!currentUser)return;
- try{await setDoc(doc(db,"users",currentUser.uid,"groceryItems",String(item.id)),item)}
- catch(error){alert("Could not save your item: "+error.message)}
-}
-async function removeItem(id){
- if(!currentUser)return;
- try{await deleteDoc(doc(db,"users",currentUser.uid,"groceryItems",String(id)))}
- catch(error){alert("Could not delete your item: "+error.message)}
-}
-$("addForm").addEventListener("submit",async e=>{
- e.preventDefault();const name=$("name").value.trim(),qty=Number($("qty").value);
- if(!name||qty<1)return;
- await saveItem({id:String(Date.now())+"-"+Math.random().toString(36).slice(2),name,qty,category:$("category").value,done:false});
- $("addForm").reset();$("qty").value=1;$("name").focus();
-});
-$("search").addEventListener("input",render);$("filter").addEventListener("change",render);
-$("clearDone").onclick=async()=>{await Promise.all(items.filter(x=>x.done).map(x=>removeItem(x.id)))};
-onAuthStateChanged(auth,user=>{
- currentUser=user;
- if(stopSync){stopSync();stopSync=null}
- $("loginPanel").hidden=!!user;$("appContent").hidden=!user;
- if(!user){items=[];render();return}
- $("accountEmail").textContent="Signed in as "+(user.email||user.displayName||"Google user");
- const q=query(itemsRef(user.uid));
- stopSync=onSnapshot(q,snapshot=>{items=snapshot.docs.map(d=>d.data());render()},error=>{showError("Database access error: "+error.message)});
-});
+<script>
+const KEY='jake-smart-grocery-list-v1';let items=[];try{items=JSON.parse(localStorage.getItem(KEY)||'[]')}catch{items=[]}
+const $=id=>document.getElementById(id);const save=()=>localStorage.setItem(KEY,JSON.stringify(items));
+function render(){const q=$('search').value.trim().toLowerCase(),f=$('filter').value;const shown=items.filter(x=>(x.name.toLowerCase().includes(q)||x.category.toLowerCase().includes(q))&&(f==='all'||(f==='done'?x.done:!x.done)));$('list').innerHTML='';shown.forEach(x=>{const li=document.createElement('li');li.className='item'+(x.done?' done':'');const check=document.createElement('input');check.type='checkbox';check.checked=x.done;check.setAttribute('aria-label','Mark '+x.name+' purchased');check.onchange=()=>{x.done=check.checked;save();render()};const name=document.createElement('div');name.className='item-name';const strong=document.createElement('strong');strong.textContent=x.name;const small=document.createElement('small');small.textContent='Qty: '+x.qty+' · '+x.category;name.append(strong,small);const actions=document.createElement('div');actions.className='actions';const edit=document.createElement('button');edit.className='secondary';edit.textContent='Edit';edit.onclick=()=>{const n=prompt('Edit item name:',x.name);if(n&&n.trim()){x.name=n.trim();const qty=prompt('Edit quantity:',x.qty);if(qty!==null&&Number(qty)>0)x.qty=Number(qty);save();render()}};const del=document.createElement('button');del.className='danger';del.textContent='Delete';del.onclick=()=>{items=items.filter(y=>y.id!==x.id);save();render()};actions.append(edit,del);li.append(check,name,actions);$('list').append(li)});$('empty').style.display=shown.length?'none':'block';$('empty').textContent=items.length?'No matching items.':'Your list is empty. Add your first grocery item above.';$('total').textContent=items.length;$('remaining').textContent=items.filter(x=>!x.done).length;$('completed').textContent=items.filter(x=>x.done).length}
+$('addForm').addEventListener('submit',e=>{e.preventDefault();const name=$('name').value.trim(),qty=Number($('qty').value);if(!name||qty<1)return;items.push({id:Date.now()+Math.random(),name,qty,category:$('category').value,done:false});save();$('addForm').reset();$('qty').value=1;render();$('name').focus()});$('search').addEventListener('input',render);$('filter').addEventListener('change',render);$('clearDone').onclick=()=>{items=items.filter(x=>!x.done);save();render()};render();
 </script></body></html>
